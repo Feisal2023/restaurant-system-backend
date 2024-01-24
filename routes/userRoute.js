@@ -7,10 +7,11 @@ import {
   logoutUser,
   registerUser,
 } from "../controllers/userController.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/logout", logoutUser);
-router.get("/getUser", getUser);
+router.get("/getUser", protect, getUser);
 
 export default router;
