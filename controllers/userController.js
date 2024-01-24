@@ -1,9 +1,11 @@
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { jwtSECRET } from "../config/config.js";
+import { emailUSER, frontendURL, jwtSECRET } from "../config/config.js";
 import User from "../models/userModel.js";
-
+import Token from "../models/tokenModel.js";
+import crypto from "crypto";
+import sendForgotEmail from "../utils/sendForgotEmail.js";
 // create token
 const generateToken = (id) => {
   return jwt.sign({ id }, jwtSECRET, {
@@ -121,4 +123,85 @@ const getUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 });
-export { registerUser, loginUser, logoutUser, getUser };
+
+// get login status
+const getLoginStatus = asyncHandler(async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.json(false);
+  }
+  // verify token
+  const verified = jwt.verify(token, jwtSECRET);
+  if (verified) {
+    res.json(true);
+  }
+  res.json(false);
+});
+// forgot Password
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User does not exists");
+  }
+
+  // Delete token if it exists in DB
+  let token = await Token.findOne({ userId: user._id });
+  if (token) {
+    await token.deleteOne();
+  }
+  // create reset token
+  let resetToken = crypto.randomBytes(32).toString("hex") + user._id;
+  console.log(resetToken);
+
+  // Hash token before saving to DB
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // save Token to DB
+  await new Token({
+    userId: user._id,
+    token: hashedToken,
+    createdAt: Date.now(),
+    expiresAt: Date.now + 5 * (60 * 1000),
+  }).save();
+
+  // construct reset Url
+  const resetUrl = `${frontendURL}/resetpassword/${resetToken}`;
+  // Reset Email
+  const message = `
+  <h2>Hello ${user.name}</h2>
+  <p>Please use the url below to reset your password</p>
+  <p>This reset link is valid for only 5minutes.</p>
+
+
+  <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+
+  <p>Best Regards...</p>
+  <p>Restaurant System Team</p>
+  `;
+  const subject = "Password Reset Request";
+  const send_to = user.email;
+  const sent_from = emailUSER;
+  const reply_to = emailUSER;
+
+  try {
+    await sendForgotEmail(subject, message, send_to, sent_from, reply_to);
+    res.status(200).json({ success: true, message: "Reset Email Sent" });
+  } catch (error) {
+    res.status(500);
+    throw new Error("Email not sent, please try again");
+  }
+});
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  getUser,
+  getLoginStatus,
+  forgotPassword,
+};
