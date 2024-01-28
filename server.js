@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http:localhost:300", "https://darajotech.vercel.app"],
+    origin: ["http://localhost:3000", "https://restaurantsystem.com"],
     credentials: true,
   })
 );

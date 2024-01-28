@@ -167,11 +167,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
     userId: user._id,
     token: hashedToken,
     createdAt: Date.now(),
-    expiresAt: Date.now + 5 * (60 * 1000),
+    expiresAt: Date.now() + 5 * (60 * 1000),
   }).save();
 
   // construct reset Url
-  const resetUrl = `${frontendURL}/resetpassword/${resetToken}`;
+  const resetUrl = `${frontendURL}/users/resetpassword/${resetToken}`;
   // Reset Email
   const message = `
   <h2>Hello ${user.name}</h2>
@@ -179,7 +179,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   <p>This reset link is valid for only 5minutes.</p>
 
 
-  <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+  <a href=${resetUrl} clicktracking=on>${resetUrl}</a>
 
   <p>Best Regards...</p>
   <p>Restaurant System Team</p>
@@ -197,6 +197,33 @@ const forgotPassword = asyncHandler(async (req, res) => {
     throw new Error("Email not sent, please try again");
   }
 });
+
+// reset Password
+const resetPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const { resetToken } = req.params;
+
+  // Hash token, then compare to token in DB
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // Find token in DB
+  const userToken = await Token.findOne({
+    token: hashedToken,
+    expiresAt: { $gt: Date.now() },
+  });
+  if (!userToken) {
+    res.status(404);
+    throw new Error("Invalid or Expired Token");
+  }
+  // Find user
+  const user = await User.findOne({ _id: userToken.userId });
+  user.password = password;
+  await user.save();
+  res.status(200).json({ message: "Password Reset Successful, Please Login" });
+});
 export {
   registerUser,
   loginUser,
@@ -204,4 +231,5 @@ export {
   getUser,
   getLoginStatus,
   forgotPassword,
+  resetPassword,
 };
