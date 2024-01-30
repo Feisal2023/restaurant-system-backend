@@ -167,7 +167,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     userId: user._id,
     token: hashedToken,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 5 * (60 * 1000),
+    expiresAt: Date.now() + 1 * (60 * 1000),
   }).save();
 
   // construct reset Url
@@ -200,7 +200,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
 // reset Password
 const resetPassword = asyncHandler(async (req, res) => {
-  const { password } = req.body;
+  const { password1 } = req.body;
   const { resetToken } = req.params;
 
   // Hash token, then compare to token in DB
@@ -220,7 +220,7 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
   // Find user
   const user = await User.findOne({ _id: userToken.userId });
-  user.password = password;
+  user.password = password1;
   await user.save();
   res.status(200).json({ message: "Password Reset Successful, Please Login" });
 });
