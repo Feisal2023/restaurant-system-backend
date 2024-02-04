@@ -95,6 +95,7 @@ const loginUser = asyncHandler(async (req, res) => {
       // sameSite: "none"
     });
     // send user data
+
     res.status(201).json(newUser);
   } else {
     res.status(400);
@@ -167,7 +168,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     userId: user._id,
     token: hashedToken,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 1 * (60 * 1000),
+    expiresAt: Date.now() + 5 * (60 * 1000),
   }).save();
 
   // construct reset Url
